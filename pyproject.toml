@@ -1,0 +1,8 @@
+[project]
+name = "ranked-channel"
+version = "0.1.0"
+description = "Browser-orchestrated ranked playlist engine with exploration/exploitation controls and minimal UI"
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.uv]
