@@ -1,18 +1,35 @@
-from __future__ import annotations
-
 import re
+from dataclasses import dataclass
+from typing import Optional
 from playwright.async_api import Page
 
-_ID_VIDEO_RE = re.compile(r'"id_video"\s*:\s*(\d+)')
+# Regex that tolerates whitespace and different quoting.
+RE_ID_VIDEO = re.compile(r'"id_video"\s*:\s*(\d+)')
+RE_ENCODED = re.compile(r'"encoded_id_video"\s*:\s*"([^"]+)"')
 
 
-async def extract_id_video(page: Page) -> str | None:
-    # Pull all script contents and look for the configuration blob containing id_video.
+@dataclass(frozen=True)
+class VideoIdentity:
+    video_id: str
+    encoded_id: Optional[str] = None
+
+
+async def extract_video_identity(page: Page) -> Optional[VideoIdentity]:
     scripts = await page.locator("script").all_inner_texts()
+
     for s in scripts:
-        if '"id_video"' not in s:
+        if "id_video" not in s:
             continue
-        m = _ID_VIDEO_RE.search(s)
-        if m:
-            return m.group(1)
+
+        m_id = RE_ID_VIDEO.search(s)
+        if not m_id:
+            continue
+
+        video_id = m_id.group(1)
+
+        m_enc = RE_ENCODED.search(s)
+        encoded_id = m_enc.group(1) if m_enc else None
+
+        return VideoIdentity(video_id=video_id, encoded_id=encoded_id)
+
     return None

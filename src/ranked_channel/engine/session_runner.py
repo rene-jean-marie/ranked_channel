@@ -9,7 +9,7 @@ from playwright.async_api import Page
 
 from ranked_channel.config import settings
 from ranked_channel.crawl.browser import launch_page, polite_sleep
-from ranked_channel.crawl.extract_video_id import extract_id_video
+from ranked_channel.crawl.extract_video_id import extract_video_identity
 from ranked_channel.crawl.extract_tags import extract_tags
 from ranked_channel.crawl.extract_related import extract_related, RelatedVideo
 from ranked_channel.crawl.normalize import canonicalize_url
@@ -19,6 +19,8 @@ from ranked_channel.domain.scoring import (
 )
 from ranked_channel.domain.policy import softmax_sample
 from ranked_channel.store.sqlite import Store
+from ranked_channel.engine.player_url import make_player_url
+
 
 
 class SessionEngine:
@@ -62,11 +64,12 @@ class SessionEngine:
                 await self._visit(page, current_url)
                 await polite_sleep()
 
-                vid = await extract_id_video(page)
-                if not vid:
+                video = await extract_video_identity(page)
+                if not video:
                     # Fallback: derive key from url (not ideal, but keeps session alive)
-                    vid = f"url:{canonicalize_url(current_url)}"
-
+                    video = f"url:{canonicalize_url(current_url)}"
+                video_id = video.video_id
+                encoded_id = video.encoded_id
                 tags = await extract_tags(page)
                 title = None
                 try:
@@ -75,11 +78,11 @@ class SessionEngine:
                     title = None
 
                 # Persist current node + mark seen
-                self.store.upsert_video(vid, current_url, title, tags)
-                self.store.incr_seen(vid, 1)
+                self.store.upsert_video(video_id, current_url, title, tags)
+                self.store.incr_seen(video_id, 1)
 
                 # Add to session items with explain filled later
-                picked.append(vid)
+                picked.append(video_id)
                 recent_tag_sets.append(set(tags))
                 if len(recent_tag_sets) > settings.diversity_window_k:
                     recent_tag_sets.pop(0)
@@ -97,7 +100,7 @@ class SessionEngine:
                         "tags": [],  # will be filled when visited
                     })
                     # graph edge weight
-                    self.store.incr_edge(vid, to_id, 1)
+                    self.store.incr_edge(video_id, to_id, 1)
                     # freq count inside this session
                     related_freq[to_id] = related_freq.get(to_id, 0) + 1
 
@@ -133,7 +136,7 @@ class SessionEngine:
                     "tags": tags,
                     "note": "Seed" if idx == 0 else "Chosen by policy",
                 }
-                self.store.add_session_item(session_id, idx, vid, current_url, title, explain)
+                self.store.add_session_item(session_id, idx, video_id, current_url, title, explain)
 
                 if idx == n - 1:
                     break
@@ -148,8 +151,17 @@ class SessionEngine:
 
         items = self.store.list_session_items(session_id)
         return {
-            "session_id": session_id,
-            "seed_url": seed_url,
-            "items": items,
-            "config": config,
-        }
+        "video_id": video.video_id,
+        "url": video.url,                       # canonical / shareable page URL
+        "play_url": make_player_url(video),     # iframe-friendly URL
+        "title": video.title,
+        "tags": video.tags,
+        "score": explain.score,
+        "freq": explain.freq,
+        "sim": explain.sim,
+        "div": explain.div,
+        "novelty": explain.novelty,
+    }
+
+
+

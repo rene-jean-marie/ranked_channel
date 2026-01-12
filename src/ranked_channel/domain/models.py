@@ -7,8 +7,9 @@ from typing import Optional
 @dataclass
 class Video:
     video_id: str
+    encoded_id: str | None
     url: str
-    title: Optional[str]
+    title: str | None
     tags: list[str]
 
 

@@ -26,7 +26,7 @@ function escapeHtml(s){
 function loadCurrent() {
   if (!session) return;
   const it = session.items[idx];
-  qs("frame").src = it.url;
+  qs("frame").src = it.play_url;
 
   const ex = it.explain || {};
   qs("meta").innerHTML = `
