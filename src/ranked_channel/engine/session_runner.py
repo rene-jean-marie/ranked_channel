@@ -126,7 +126,7 @@ class SessionEngine:
                     score = combined_score(freq=freq, sim=sim, div=div, novelty=nov, freq_norm=fn)
 
                     candidates.append(Candidate(
-                        video=Video(video_id=cid, url=info["url"], title=info.get("title"), tags=ctags),
+                        video=Video(video_id=cid, encoded_id=None, url=info["url"], title=info.get("title"), tags=ctags),
                         freq=freq, sim=sim, div=div, novelty=nov, score=score
                     ))
 
@@ -135,6 +135,7 @@ class SessionEngine:
                     "picked_idx": idx,
                     "tags": tags,
                     "note": "Seed" if idx == 0 else "Chosen by policy",
+                    "encoded_id": encoded_id,
                 }
                 self.store.add_session_item(session_id, idx, video_id, current_url, title, explain)
 
@@ -150,18 +151,27 @@ class SessionEngine:
                 current_id = nxt.video.video_id
 
         items = self.store.list_session_items(session_id)
+        enriched_items = []
+        for item in items:
+            explain = item.get("explain") or {}
+            video = Video(
+                video_id=item["video_id"],
+                encoded_id=explain.get("encoded_id"),
+                url=item["url"],
+                title=item.get("title"),
+                tags=explain.get("tags") or [],
+            )
+            enriched_items.append({
+                "video_id": item["video_id"],
+                "url": item["url"],
+                "title": item.get("title"),
+                "play_url": make_player_url(video),
+                "explain": explain,
+            })
+
         return {
-        "video_id": video.video_id,
-        "url": video.url,                       # canonical / shareable page URL
-        "play_url": make_player_url(video),     # iframe-friendly URL
-        "title": video.title,
-        "tags": video.tags,
-        "score": explain.score,
-        "freq": explain.freq,
-        "sim": explain.sim,
-        "div": explain.div,
-        "novelty": explain.novelty,
-    }
-
-
+            "session_id": session_id,
+            "seed_url": seed_url,
+            "items": enriched_items,
+        }
 
