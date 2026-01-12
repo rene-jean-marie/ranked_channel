@@ -107,66 +107,6 @@ function buildPlayUrl(rawUrl) {
   }
 }
 
-function renderList() {
-  const itemsDiv = qs("items");
-  itemsDiv.innerHTML = "";
-  if (!session) return;
-
-  session.items.forEach((it, i) => {
-    const div = document.createElement("div");
-    div.className = "item" + (i === idx ? " active" : "");
-    const t = it.title || it.url;
-    div.innerHTML = `<div><strong>${i+1}.</strong> <a href="${it.url}" target="_blank" rel="noreferrer">${escapeHtml(t)}</a></div>
-                     <small class="muted">${escapeHtml(it.video_id)}</small>`;
-    div.onclick = () => { idx = i; loadCurrent(); renderList(); };
-    itemsDiv.appendChild(div);
-  });
-}
-
-function escapeHtml(s){
-  return (s||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
-}
-
-function ensureFrameExists() {
-  const container = qs("playerContainer");
-  let frame = qs("frame");
-  if (!frame) {
-    frame = document.createElement("iframe");
-    frame.id = "frame";
-    frame.className = "player";
-    frame.referrerPolicy = "no-referrer";
-    frame.allow = "autoplay; encrypted-media";
-    container.appendChild(frame);
-  }
-  return frame;
-}
-
-function teardownYouTubePlayer() {
-  if (ytPlayer) {
-    ytPlayer.destroy();
-    ytPlayer = null;
-  }
-  ensureFrameExists();
-}
-
-function buildPlayUrl(rawUrl) {
-  try {
-    const url = new URL(rawUrl, window.location.origin);
-    if (url.pathname === "/proxy" && url.searchParams.has("url")) {
-      const target = new URL(url.searchParams.get("url"));
-      target.searchParams.set("autoplay", "1");
-      target.searchParams.set("playsinline", "1");
-      url.searchParams.set("url", target.toString());
-      return url.toString();
-    }
-    url.searchParams.set("autoplay", "1");
-    url.searchParams.set("playsinline", "1");
-    return url.toString();
-  } catch (err) {
-    return rawUrl;
-  }
-}
-
 function extractYouTubeId(rawUrl) {
   try {
     const url = new URL(rawUrl);
