@@ -23,6 +23,31 @@ window.addEventListener("message", (event) => {
   }
 });
 
+window.addEventListener("keydown", (event) => {
+  if (!session) return;
+  if (event.ctrlKey && (event.key === "ArrowRight" || event.key === "ArrowLeft")) {
+    event.preventDefault();
+    if (event.key === "ArrowRight") {
+      advanceToNext();
+    } else {
+      idx = Math.max(idx - 1, 0);
+      loadCurrent();
+      renderList();
+    }
+    return;
+  }
+  if (event.key === "ArrowUp") {
+    event.preventDefault();
+    sendFeedback("like");
+    return;
+  }
+  if (event.key === "ArrowDown") {
+    event.preventDefault();
+    sendFeedback("skip");
+    advanceToNext();
+  }
+});
+
 function renderList() {
   const itemsDiv = qs("items");
   itemsDiv.innerHTML = "";
@@ -67,7 +92,14 @@ function teardownYouTubePlayer() {
 
 function buildPlayUrl(rawUrl) {
   try {
-    const url = new URL(rawUrl);
+    const url = new URL(rawUrl, window.location.origin);
+    if (url.pathname === "/proxy" && url.searchParams.has("url")) {
+      const target = new URL(url.searchParams.get("url"));
+      target.searchParams.set("autoplay", "1");
+      target.searchParams.set("playsinline", "1");
+      url.searchParams.set("url", target.toString());
+      return url.toString();
+    }
     url.searchParams.set("autoplay", "1");
     url.searchParams.set("playsinline", "1");
     return url.toString();
