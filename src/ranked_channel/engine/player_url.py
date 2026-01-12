@@ -1,4 +1,4 @@
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlparse, urlencode
 
 def _extract_youtube_id(url: str) -> str | None:
     parsed = urlparse(url)
@@ -27,7 +27,8 @@ def make_player_url(video) -> str:
 
     # XNXX: prefers embedframe/{encoded_id_video} for iframe playback
     if "xnxx.com" in host and getattr(video, "encoded_id", None):
-        return f"https://www.xnxx.com/embedframe/{video.encoded_id}"
+        embed_url = f"https://www.xnxx.com/embedframe/{video.encoded_id}"
+        return f"/proxy?{urlencode({'url': embed_url})}"
 
     youtube_id = _extract_youtube_id(video.url)
     if youtube_id:
