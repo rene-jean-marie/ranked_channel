@@ -53,7 +53,7 @@ class SessionEngine:
 
         picked: list[str] = []
         recent_tag_sets: list[set[str]] = []
-        candidate_map: dict[str, dict[str, Any]] = {}  # video_id -> info (url/title/tags)
+        candidate_map: dict[str, dict[str, Any]] = {}  # video_id -> info (url/title/tags/encoded_id)
         related_freq: dict[str, int] = {}  # video_id -> freq among explored from picked set
 
         async with launch_page() as page:
@@ -67,9 +67,12 @@ class SessionEngine:
                 video = await extract_video_identity(page)
                 if not video:
                     # Fallback: derive key from url (not ideal, but keeps session alive)
-                    video = f"url:{canonicalize_url(current_url)}"
-                video_id = video.video_id
-                encoded_id = video.encoded_id
+                    fallback_id = f"url:{canonicalize_url(current_url)}"
+                    video_id = fallback_id
+                    encoded_id = None
+                else:
+                    video_id = video.video_id
+                    encoded_id = video.encoded_id
                 tags = await extract_tags(page)
                 title = None
                 try:
@@ -80,6 +83,15 @@ class SessionEngine:
                 # Persist current node + mark seen
                 self.store.upsert_video(video_id, current_url, title, tags)
                 self.store.incr_seen(video_id, 1)
+                candidate_map.setdefault(video_id, {
+                    "video_id": video_id,
+                    "url": current_url,
+                    "title": title,
+                    "tags": tags,
+                    "encoded_id": encoded_id,
+                })
+                if encoded_id:
+                    candidate_map[video_id]["encoded_id"] = encoded_id
 
                 # Add to session items with explain filled later
                 picked.append(video_id)
@@ -98,7 +110,10 @@ class SessionEngine:
                         "url": to_url,
                         "title": rv.title,
                         "tags": [],  # will be filled when visited
+                        "encoded_id": rv.eid,
                     })
+                    if rv.eid:
+                        candidate_map[to_id]["encoded_id"] = rv.eid
                     # graph edge weight
                     self.store.incr_edge(video_id, to_id, 1)
                     # freq count inside this session
@@ -127,6 +142,13 @@ class SessionEngine:
 
                     candidates.append(Candidate(
                         video=Video(video_id=cid, encoded_id=None, url=info["url"], title=info.get("title"), tags=ctags),
+                        video=Video(
+                            video_id=cid,
+                            encoded_id=info.get("encoded_id"),
+                            url=info["url"],
+                            title=info.get("title"),
+                            tags=ctags,
+                        ),
                         freq=freq, sim=sim, div=div, novelty=nov, score=score
                     ))
 
