@@ -5,6 +5,24 @@ let ytApiPromise = null;
 
 function qs(id){ return document.getElementById(id); }
 
+function isVideoEndedMessage(payload) {
+  if (!payload) return false;
+  if (typeof payload === "string") {
+    return payload.includes("VideoEvent: Ended");
+  }
+  if (typeof payload === "object" && typeof payload.message === "string") {
+    return payload.message.includes("VideoEvent: Ended");
+  }
+  return false;
+}
+
+window.addEventListener("message", (event) => {
+  if (isVideoEndedMessage(event.data)) {
+    const nextBtn = qs("next");
+    if (nextBtn) nextBtn.click();
+  }
+});
+
 function renderList() {
   const itemsDiv = qs("items");
   itemsDiv.innerHTML = "";
