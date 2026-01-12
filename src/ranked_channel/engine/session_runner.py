@@ -67,9 +67,12 @@ class SessionEngine:
                 video = await extract_video_identity(page)
                 if not video:
                     # Fallback: derive key from url (not ideal, but keeps session alive)
-                    video = f"url:{canonicalize_url(current_url)}"
-                video_id = video.video_id
-                encoded_id = video.encoded_id
+                    fallback_id = f"url:{canonicalize_url(current_url)}"
+                    video_id = fallback_id
+                    encoded_id = None
+                else:
+                    video_id = video.video_id
+                    encoded_id = video.encoded_id
                 tags = await extract_tags(page)
                 title = None
                 try:
@@ -162,6 +165,5 @@ class SessionEngine:
         "div": explain.div,
         "novelty": explain.novelty,
     }
-
 
 
