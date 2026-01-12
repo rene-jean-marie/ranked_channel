@@ -1,5 +1,7 @@
 let session = null;
 let idx = 0;
+let ytPlayer = null;
+let ytApiPromise = null;
 
 function qs(id){ return document.getElementById(id); }
 
@@ -23,10 +25,112 @@ function escapeHtml(s){
   return (s||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
 }
 
+function ensureFrameExists() {
+  const container = qs("playerContainer");
+  let frame = qs("frame");
+  if (!frame) {
+    frame = document.createElement("iframe");
+    frame.id = "frame";
+    frame.className = "player";
+    frame.referrerPolicy = "no-referrer";
+    frame.allow = "autoplay; encrypted-media";
+    container.appendChild(frame);
+  }
+  return frame;
+}
+
+function teardownYouTubePlayer() {
+  if (ytPlayer) {
+    ytPlayer.destroy();
+    ytPlayer = null;
+  }
+  ensureFrameExists();
+}
+
+function buildPlayUrl(rawUrl) {
+  try {
+    const url = new URL(rawUrl);
+    url.searchParams.set("autoplay", "1");
+    url.searchParams.set("playsinline", "1");
+    return url.toString();
+  } catch (err) {
+    return rawUrl;
+  }
+}
+
+function extractYouTubeId(rawUrl) {
+  try {
+    const url = new URL(rawUrl);
+    const host = url.hostname.toLowerCase();
+    if (host === "youtu.be" || host.endsWith(".youtu.be")) {
+      return url.pathname.replace("/", "") || null;
+    }
+    if (host.endsWith("youtube.com")) {
+      if (url.pathname === "/watch") {
+        return url.searchParams.get("v");
+      }
+      const parts = url.pathname.split("/").filter(Boolean);
+      if (parts[0] === "embed" || parts[0] === "shorts") {
+        return parts[1] || null;
+      }
+    }
+  } catch (err) {
+    return null;
+  }
+  return null;
+}
+
+function loadYouTubeApi() {
+  if (ytApiPromise) return ytApiPromise;
+  ytApiPromise = new Promise((resolve) => {
+    if (window.YT && window.YT.Player) {
+      resolve(window.YT);
+      return;
+    }
+    const tag = document.createElement("script");
+    tag.src = "https://www.youtube.com/iframe_api";
+    const prior = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+      if (typeof prior === "function") prior();
+      resolve(window.YT);
+    };
+    document.head.appendChild(tag);
+  });
+  return ytApiPromise;
+}
+
+async function ensureYouTubePlayer(videoId) {
+  await loadYouTubeApi();
+  if (!ytPlayer) {
+    ytPlayer = new YT.Player("frame", {
+      videoId,
+      playerVars: { autoplay: 1, playsinline: 1, rel: 0 },
+      events: {
+        onStateChange: (event) => {
+          if (event.data === YT.PlayerState.ENDED) {
+            advanceToNext();
+          }
+        }
+      }
+    });
+  } else {
+    ytPlayer.loadVideoById(videoId);
+  }
+}
+
 function loadCurrent() {
   if (!session) return;
   const it = session.items[idx];
-  qs("frame").src = it.play_url;
+  const playUrl = buildPlayUrl(it.play_url);
+  const youtubeId = extractYouTubeId(playUrl);
+
+  if (youtubeId) {
+    ensureYouTubePlayer(youtubeId);
+  } else {
+    teardownYouTubePlayer();
+    const frame = ensureFrameExists();
+    frame.src = playUrl;
+  }
 
   const ex = it.explain || {};
   qs("meta").innerHTML = `
@@ -40,6 +144,14 @@ function loadCurrent() {
     <div><strong>Session:</strong> ${escapeHtml(session.session_id)}</div>
     <div><strong>Seed:</strong> ${escapeHtml(session.seed_url)}</div>
   `;
+}
+
+function advanceToNext() {
+  if (!session) return;
+  if (idx >= session.items.length - 1) return;
+  idx += 1;
+  loadCurrent();
+  renderList();
 }
 
 async function buildSession() {
@@ -76,10 +188,10 @@ async function sendFeedback(action) {
 }
 
 qs("go").onclick = buildSession;
-qs("next").onclick = () => { if (!session) return; idx = Math.min(idx+1, session.items.length-1); loadCurrent(); renderList(); };
+qs("next").onclick = advanceToNext;
 qs("prev").onclick = () => { if (!session) return; idx = Math.max(idx-1, 0); loadCurrent(); renderList(); };
 qs("open").onclick = () => { if (!session) return; window.open(session.items[idx].url, "_blank", "noreferrer"); };
 
 qs("like").onclick = async () => { await sendFeedback("like"); };
-qs("skip").onclick = async () => { await sendFeedback("skip"); qs("next").click(); };
-qs("block").onclick = async () => { await sendFeedback("block"); qs("next").click(); };
+qs("skip").onclick = async () => { await sendFeedback("skip"); advanceToNext(); };
+qs("block").onclick = async () => { await sendFeedback("block"); advanceToNext(); };
