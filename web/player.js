@@ -22,6 +22,30 @@ window.addEventListener("message", (event) => {
     if (nextBtn) nextBtn.click();
   }
 });
+window.addEventListener("keydown", (event) => {
+  if (!session) return;
+  if (event.ctrlKey && (event.key === "ArrowRight" || event.key === "ArrowLeft")) {
+    event.preventDefault();
+    if (event.key === "ArrowRight") {
+      advanceToNext();
+    } else {
+      idx = Math.max(idx - 1, 0);
+      loadCurrent();
+      renderList();
+    }
+    return;
+  }
+  if (event.key === "ArrowUp") {
+    event.preventDefault();
+    sendFeedback("like");
+    return;
+  }
+  if (event.key === "ArrowDown") {
+    event.preventDefault();
+    sendFeedback("skip");
+    advanceToNext();
+  }
+});
 
 function renderList() {
   const itemsDiv = qs("items");
