@@ -4,52 +4,310 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>ranked-channel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet" />
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 16px; }
+    :root {
+      color-scheme: dark;
+      --bg: #05070f;
+      --card: rgba(12, 16, 28, 0.78);
+      --border: rgba(148, 163, 184, 0.18);
+      --text: #f8fafc;
+      --muted: rgba(226, 232, 240, 0.68);
+      --accent: #22d3ee;
+      --accent-2: #f59e0b;
+      --accent-3: #84cc16;
+      --shadow: 0 22px 60px rgba(3, 7, 18, 0.65);
+      --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: "Space Grotesk", "Trebuchet MS", "Gill Sans", "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--sans);
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: -20%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    body::before {
+      background:
+        radial-gradient(circle at 18% 20%, rgba(34, 211, 238, 0.25), transparent 55%),
+        radial-gradient(circle at 82% 12%, rgba(245, 158, 11, 0.25), transparent 50%),
+        radial-gradient(circle at 72% 75%, rgba(132, 204, 22, 0.22), transparent 55%);
+      filter: blur(30px);
+    }
+
+    body::after {
+      background:
+        linear-gradient(120deg, rgba(30, 41, 59, 0.7), rgba(2, 6, 23, 0.7)),
+        repeating-linear-gradient(120deg, rgba(255, 255, 255, 0.03) 0px, rgba(255, 255, 255, 0.03) 1px, transparent 1px, transparent 4px);
+      opacity: 0.5;
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 24px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .hero {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 26px 28px;
+      border-radius: 20px;
+      background: linear-gradient(140deg, rgba(15, 23, 42, 0.78), rgba(2, 6, 23, 0.9));
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      box-shadow: var(--shadow);
+      animation: floatIn 0.8s ease both;
+    }
+
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.3em;
+      font-size: 0.7rem;
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+
+    h1 {
+      margin: 8px 0 6px;
+      font-size: clamp(2.2rem, 4vw, 3.4rem);
+    }
+
+    .tagline {
+      margin: 0;
+      color: var(--muted);
+      max-width: 560px;
+    }
+
+    .pill-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .pill {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: rgba(15, 23, 42, 0.55);
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
     .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-    input[type="text"] { width: min(900px, 100%); padding: 8px; }
-    button { padding: 8px 10px; cursor: pointer; }
-    .card { border: 1px solid #3333; border-radius: 12px; padding: 12px; margin-top: 12px; }
-    .player { width: 100%; height: 70vh; border: 1px solid #3333; border-radius: 12px; }
-    .muted { opacity: 0.75; }
-    .grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+
+    .inputs {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      width: 100%;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      width: min(760px, 100%);
+      padding: 12px 14px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 12px;
+      color: var(--text);
+      font-family: var(--mono);
+    }
+
+    input[type="number"] { width: 100px; }
+
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.2);
+    }
+
+    button {
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: rgba(15, 23, 42, 0.6);
+      color: var(--text);
+      cursor: pointer;
+      font-family: var(--sans);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border 0.2s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(34, 211, 238, 0.7);
+      box-shadow: 0 10px 24px rgba(34, 211, 238, 0.25);
+    }
+
+    .btn-primary {
+      background: linear-gradient(120deg, rgba(34, 211, 238, 0.9), rgba(245, 158, 11, 0.85));
+      color: #020617;
+      font-weight: 600;
+      border: none;
+      box-shadow: 0 12px 24px rgba(34, 211, 238, 0.4);
+    }
+
+    .btn-action {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      font-family: var(--mono);
+      font-size: 0.85rem;
+    }
+
+    .btn-like { border-color: rgba(132, 204, 22, 0.6); }
+    .btn-skip { border-color: rgba(245, 158, 11, 0.6); }
+    .btn-block { border-color: rgba(248, 113, 113, 0.6); }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      animation: fadeUp 0.8s ease both;
+    }
+
+    .player {
+      width: 100%;
+      height: min(70vh, 620px);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 16px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    }
+
+    .muted { color: var(--muted); }
+
+    .grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
     @media (min-width: 1100px) { .grid { grid-template-columns: 2fr 1fr; } }
-    .list { max-height: 70vh; overflow: auto; }
-    .item { padding: 8px; border-bottom: 1px solid #3332; }
-    .item.active { background: #3331; }
+
+    .list { max-height: min(70vh, 620px); overflow: auto; padding-right: 4px; }
+
+    .item {
+      padding: 12px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+      border-radius: 12px;
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    .item:hover { background: rgba(30, 41, 59, 0.6); }
+    .item.active {
+      background: linear-gradient(120deg, rgba(34, 211, 238, 0.18), rgba(245, 158, 11, 0.12));
+      border: 1px solid rgba(34, 211, 238, 0.35);
+      transform: translateX(4px);
+    }
+
     a { color: inherit; }
-    small { display:block; }
+    small { display: block; font-family: var(--mono); }
+
+    .meta-stack {
+      display: grid;
+      gap: 6px;
+      font-family: var(--mono);
+      font-size: 0.85rem;
+    }
+
+    .status {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .status .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent-3);
+      box-shadow: 0 0 12px rgba(132, 204, 22, 0.8);
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes floatIn {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 720px) {
+      .hero { flex-direction: column; align-items: flex-start; }
+      .pill-row { justify-content: flex-start; }
+    }
   </style>
 </head>
 <body>
-  <h2>ranked-channel</h2>
+  <div class="page">
+    <header class="hero">
+      <div>
+        <div class="eyebrow">Session Lab</div>
+        <h1>Ranked Channel</h1>
+        <p class="tagline">Build an evolving playlist that reacts to your taste. Fast iterations, bold signal.</p>
+      </div>
+      <div class="pill-row">
+        <div class="pill">Local feedback loop</div>
+        <div class="pill">SQLite taste profile</div>
+        <div class="pill">No ToS bypassing</div>
+      </div>
+    </header>
 
-  <div class="row">
-    <input id="seed" type="text" placeholder="Seed video URL..." />
-    <input id="n" type="number" min="5" max="100" value="25" style="width: 90px; padding: 8px;" />
-    <button id="go">Build session</button>
-  </div>
-  <p class="muted">Feedback updates a local taste profile (SQLite). The engine still runs ToS-compliant automation—no bypassing restrictions.</p>
-
-  <div class="grid">
     <div class="card">
-      <div class="row">
-        <button id="prev">Back</button>
-        <button id="next">Next</button>
-        <button id="open">Open in new tab</button>
-        <button id="like">👍 Enjoy</button>
-        <button id="skip">⏭ Skip</button>
-        <button id="block">👎 Don’t show</button>
+      <div class="row status">
+        <div class="dot"></div>
+        <div class="muted">Ready to spin up a new session.</div>
       </div>
-      <div id="playerContainer" style="margin-top:10px;">
-        <iframe id="frame" class="player" referrerpolicy="no-referrer" allow="autoplay; encrypted-media"></iframe>
+      <div class="row inputs" style="margin-top: 12px;">
+        <input id="seed" type="text" placeholder="Seed video URL..." />
+        <input id="n" type="number" min="5" max="100" value="25" />
+        <button id="go" class="btn-primary">Build session</button>
       </div>
-      <div id="meta" class="muted" style="margin-top:8px;"></div>
+      <p class="muted" style="margin: 12px 0 0;">Feedback updates a local taste profile (SQLite). The engine still runs ToS-compliant automation—no bypassing restrictions.</p>
     </div>
 
-    <div class="card list">
-      <div class="muted" id="sessionInfo"></div>
-      <div id="items"></div>
+    <div class="grid">
+      <div class="card">
+        <div class="row">
+          <button id="prev" class="btn-action">Back</button>
+          <button id="next" class="btn-action">Next</button>
+          <button id="open" class="btn-action">Open in new tab</button>
+          <button id="like" class="btn-action btn-like">👍 Enjoy</button>
+          <button id="skip" class="btn-action btn-skip">⏭ Skip</button>
+          <button id="block" class="btn-action btn-block">👎 Don’t show</button>
+        </div>
+        <div id="playerContainer" style="margin-top:10px;">
+          <iframe id="frame" class="player" referrerpolicy="no-referrer" allow="autoplay; encrypted-media"></iframe>
+        </div>
+        <div id="meta" class="muted meta-stack" style="margin-top:12px;"></div>
+      </div>
+
+      <div class="card list">
+        <div class="muted meta-stack" id="sessionInfo"></div>
+        <div id="items"></div>
+      </div>
     </div>
   </div>
 
