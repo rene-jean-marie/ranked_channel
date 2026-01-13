@@ -43,7 +43,7 @@ python -m playwright install chromium
 ### 2) Run the server
 
 ```bash
-uvicorn ranked_channel.api.app:app --reload
+./run_server.sh
 ```
 
 Open the UI at:
